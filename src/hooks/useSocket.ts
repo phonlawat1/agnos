@@ -1,20 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Socket } from "socket.io-client";
 import { initSocket, disconnectSocket } from "@/lib/socket";
 
 export function useSocket(): Socket | null {
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     const sock = initSocket();
     setSocket(sock);
 
+    // Track connection state
+    const handleConnect = () => setIsConnected(true);
+    const handleDisconnect = () => setIsConnected(false);
+
+    if (sock) {
+      sock.on("connect", handleConnect);
+      sock.on("disconnect", handleDisconnect);
+
+      if (sock.connected) {
+        setIsConnected(true);
+      }
+    }
+
     return () => {
-      // Cleanup if needed
+      if (sock) {
+        sock.off("connect", handleConnect);
+        sock.off("disconnect", handleDisconnect);
+      }
     };
   }, []);
 
   return socket;
+}
+
+/**
+ * Hook to listen to a specific socket event and call a callback
+ * Handles automatic cleanup of listeners
+ */
+export function useSocketListener<T = any>(
+  eventName: string,
+  callback: (data: T) => void
+): void {
+  const socket = useSocket();
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on(eventName, callback);
+
+    return () => {
+      socket.off(eventName, callback);
+    };
+  }, [socket, eventName, callback]);
 }

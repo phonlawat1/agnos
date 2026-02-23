@@ -33,11 +33,11 @@ io.on("connection", (socket) => {
   console.log(`✓ User connected: ${socket.id}`);
 
   // Patient form events
-  socket.on("patient-submit", (patient) => {
+  socket.on("new-patient", (patient) => {
     console.log(`📝 Patient submitted:`, patient.id);
 
     // Broadcast to all staff users
-    io.emit("patient-submitted", {
+    io.emit("patient-added", {
       ...patient,
       timestamp: new Date(patient.timestamp),
     });

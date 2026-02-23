@@ -30,7 +30,7 @@ export function usePatientForm() {
 
       // Emit via socket to staff
       if (socket) {
-        socket.emit('patient-submit', patient);
+        socket.emit('new-patient', patient);
         // Notify that typing has stopped
         socket.emit('patient-stopped-typing', { patientId });
       }

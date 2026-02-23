@@ -27,7 +27,7 @@ export default function StaffPage() {
     if (!socket) return;
 
     // Use store for adding/updating patients
-    socket.on("patient-submitted", (data: Patient) => {
+    socket.on("patient-added", (data: Patient) => {
       usePatientStore.getState().addPatient({ ...data, isTyping: false });
     });
 
@@ -44,7 +44,7 @@ export default function StaffPage() {
     });
 
     return () => {
-      socket.off("patient-submitted");
+      socket.off("patient-added");
       socket.off("patient-typing");
       socket.off("patient-stopped-typing");
     };
