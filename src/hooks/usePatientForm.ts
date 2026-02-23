@@ -30,9 +30,12 @@ export function usePatientForm() {
 
       // Emit via socket to staff
       if (socket) {
+        console.log("📤 Patient: Emitting new-patient event:", patient.id);
         socket.emit('new-patient', patient);
         // Notify that typing has stopped
         socket.emit('patient-stopped-typing', { patientId });
+      } else {
+        console.warn("⚠️  Patient: Socket not available, event not sent");
       }
 
       // Add to local store (optimistic)

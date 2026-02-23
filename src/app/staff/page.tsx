@@ -24,26 +24,35 @@ export default function StaffPage() {
   const socket = useSocket();
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {
+      console.log("⚠️  Staff: Socket not available yet");
+      return;
+    }
+
+    console.log("✓ Staff: Setting up socket listeners");
 
     // Use store for adding/updating patients
     socket.on("patient-added", (data: Patient) => {
+      console.log("📥 Staff: Patient added event received:", data.id);
       usePatientStore.getState().addPatient({ ...data, isTyping: false });
     });
 
     socket.on("patient-typing", (data: { patientId: string }) => {
+      console.log("⌨️  Staff: Patient typing:", data.patientId);
       usePatientStore
         .getState()
         .updatePatient(data.patientId, { isTyping: true });
     });
 
     socket.on("patient-stopped-typing", (data: { patientId: string }) => {
+      console.log("✋ Staff: Patient stopped typing:", data.patientId);
       usePatientStore
         .getState()
         .updatePatient(data.patientId, { isTyping: false });
     });
 
     return () => {
+      console.log("🧹 Staff: Cleaning up socket listeners");
       socket.off("patient-added");
       socket.off("patient-typing");
       socket.off("patient-stopped-typing");

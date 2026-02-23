@@ -13,14 +13,21 @@ export function useSocket(): Socket | null {
     setSocket(sock);
 
     // Track connection state
-    const handleConnect = () => setIsConnected(true);
-    const handleDisconnect = () => setIsConnected(false);
+    const handleConnect = () => {
+      console.log("✓ Client: Socket connected, ready for events");
+      setIsConnected(true);
+    };
+    const handleDisconnect = () => {
+      console.log("✗ Client: Socket disconnected");
+      setIsConnected(false);
+    };
 
     if (sock) {
       sock.on("connect", handleConnect);
       sock.on("disconnect", handleDisconnect);
 
       if (sock.connected) {
+        console.log("✓ Socket already connected");
         setIsConnected(true);
       }
     }
