@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useSocket } from "@/hooks/useSocket";
+import { useSocket, useSocketListener } from "@/hooks/useSocket";
 import PatientLiveCard from "@/components/staff/PatientLiveCard";
 import type { Patient } from "@/types/patient";
 import { usePatientStore } from "@/store/patientStore";
-
-type ViewMode = "grid" | "list" | "map";
-type SortOption = "newest" | "oldest" | "name" | "gender" | "typing";
 
 interface PatientSubmission extends Patient {
   submissionId: string; // Unique ID for each submission
@@ -17,47 +14,12 @@ interface PatientSubmission extends Patient {
 
 export default function StaffPage() {
   const patients = usePatientStore((s) => s.patients);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
-  const [filterGender, setFilterGender] = useState<string>("all");
-  const [showTypingOnly, setShowTypingOnly] = useState(false);
   const socket = useSocket();
 
-  useEffect(() => {
-    if (!socket) {
-      console.log("⚠️  Staff: Socket not available yet");
-      return;
-    }
-
-    console.log("✓ Staff: Setting up socket listeners");
-
-    // Use store for adding/updating patients
-    socket.on("patient-added", (data: Patient) => {
-      console.log("📥 Staff: Patient added event received:", data.id);
-      usePatientStore.getState().addPatient({ ...data, isTyping: false });
-    });
-
-    socket.on("patient-typing", (data: { patientId: string }) => {
-      console.log("⌨️  Staff: Patient typing:", data.patientId);
-      usePatientStore
-        .getState()
-        .updatePatient(data.patientId, { isTyping: true });
-    });
-
-    socket.on("patient-stopped-typing", (data: { patientId: string }) => {
-      console.log("✋ Staff: Patient stopped typing:", data.patientId);
-      usePatientStore
-        .getState()
-        .updatePatient(data.patientId, { isTyping: false });
-    });
-
-    return () => {
-      console.log("🧹 Staff: Cleaning up socket listeners");
-      socket.off("patient-added");
-      socket.off("patient-typing");
-      socket.off("patient-stopped-typing");
-    };
-  }, [socket]);
+  useSocketListener<Patient>("patient-added", (data: Patient) => {
+    console.log("📥 Staff: Patient added event received:", data.id);
+    usePatientStore.getState().addPatient({ ...data, isTyping: false });
+  });
 
   // Filter and sort submissions
   const filteredSubmissions = useMemo(() => {
@@ -72,46 +34,8 @@ export default function StaffPage() {
       } as PatientSubmission;
     });
 
-    let filtered = mapped;
-
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (p) =>
-          `${p.firstName} ${p.lastName}`.toLowerCase().includes(query) ||
-          p.email.toLowerCase().includes(query) ||
-          p.phone.includes(query)
-      );
-    }
-
-    // Sort
-    const sorted = [...filtered];
-
-    return sorted;
-  }, [patients, searchQuery, filterGender, showTypingOnly, sortBy]);
-
-  // Statistics - count unique patients who have submitted
-  const stats = useMemo(() => {
-    const uniquePatients = new Map<string, PatientSubmission>();
-    filteredSubmissions.forEach((sub) => {
-      const patientId = sub.id || sub.submissionId;
-      if (!uniquePatients.has(patientId)) {
-        uniquePatients.set(patientId, sub);
-      }
-    });
-
-    const uniqueList = Array.from(uniquePatients.values());
-
-    return {
-      totalSubmissions: filteredSubmissions.length,
-      uniquePatients: uniquePatients.size,
-      typing: filteredSubmissions.filter((p) => p.isTyping).length,
-      male: uniqueList.filter((p) => p.gender === "male").length,
-      female: uniqueList.filter((p) => p.gender === "female").length,
-      other: uniqueList.filter((p) => p.gender === "other").length,
-    };
-  }, [filteredSubmissions]);
+    return mapped;
+  }, [patients]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
@@ -121,10 +45,6 @@ export default function StaffPage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
             Patient Registration History
           </h1>
-          <p className="text-gray-600">
-            View all patient submissions and registrations in real-time (newest
-            first)
-          </p>
         </div>
 
         {/* Display Content */}
