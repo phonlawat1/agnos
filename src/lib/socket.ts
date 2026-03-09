@@ -11,8 +11,32 @@ let socket: Socket | null = null;
 export const initSocket = () => {
   if (socket) return socket;
 
-  const socketUrl =
-    process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+  // Try to read the deployment URL first. When deploying the
+  // frontend separately from the realtime server we require the
+  // variable to be set on Vercel (or whichever host) so the client
+  // knows where to connect. In local development we fall back to
+  // localhost, and we can also derive a URL from the current origin
+  // if the user forgot to configure the env var.
+  let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "";
+
+  if (!socketUrl) {
+    if (typeof window !== "undefined") {
+      // derive from current location assuming the socket server is
+      // running on port 3001; this allows `npm run dev` to work
+      // without an env file and gives a helpful warning in prod.
+      const { protocol, host } = window.location;
+      // keep hostname, replace port if one is present
+      const hostname = host.replace(/:\d+$/, "");
+      socketUrl = `${protocol}//${hostname}:3001`;
+    } else {
+      socketUrl = "http://localhost:3001"; // server-side fallback
+    }
+    console.warn(
+      "⚠️ NEXT_PUBLIC_SOCKET_URL not set, using",
+      socketUrl,
+      "– make sure to configure this in production"
+    );
+  }
 
   console.log(`🔌 Connecting to Socket.io server at ${socketUrl}`);
 
