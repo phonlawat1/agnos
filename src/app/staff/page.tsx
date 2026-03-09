@@ -16,9 +16,13 @@ export default function StaffPage() {
   const patients = usePatientStore((s) => s.patients);
   const socket = useSocket();
 
-  useSocketListener<Patient>("patient-added", (data: Patient) => {
+  useSocketListener<Patient>(socket, "patient-added", (data: Patient) => {
     console.log("📥 Staff: Patient added event received:", data.id);
-    usePatientStore.getState().addPatient({ ...data, isTyping: false });
+
+    usePatientStore.getState().addPatient({
+      ...data,
+      isTyping: false,
+    });
   });
 
   // Filter and sort submissions

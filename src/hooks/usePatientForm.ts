@@ -6,6 +6,7 @@ import { patientSchema, type PatientFormData } from '@/lib/validation';
 import { generateId } from '@/lib/utils';
 import type { Patient } from '@/types/patient';
 import { usePatientStore } from '@/store/patientStore';
+import { initSocket } from "@/lib/socket";
 
 export function usePatientForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,46 +15,38 @@ export function usePatientForm() {
   const [patientId] = useState(() => generateId());
 
   const submitPatient = async (data: PatientFormData) => {
-    setIsLoading(true);
-    setError(null);
+  setIsLoading(true);
+  setError(null);
 
-    try {
-      // Validate data
-      const validatedData = patientSchema.parse(data);
+  try {
+    const validatedData = patientSchema.parse(data);
 
-      const patient: Patient = {
-        id: patientId,
-        ...validatedData,
-        timestamp: new Date(),
-        isTyping: false,
-      };
+    const patient: Patient = {
+      id: patientId,
+      ...validatedData,
+      timestamp: new Date(),
+      isTyping: false,
+    };
 
-      // Emit via socket to staff
-      if (socket) {
-        console.log("📤 Patient: Emitting new-patient event:", patient.id);
-        socket.emit('new-patient', patient);
-        // Notify that typing has stopped
-        socket.emit('patient-stopped-typing', { patientId });
-      } else {
-        console.warn("⚠️  Patient: Socket not available, event not sent");
-      }
+    // 🔥 FIX สำคัญ
+    const activeSocket = socket || initSocket();
 
-      // Add to local store (optimistic)
-      try {
-        usePatientStore.getState().addPatient(patient);
-      } catch (e) {
-        // ignore store errors
-      }
+    console.log("📤 Emitting new-patient:", patient.id);
 
-      return patient;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    activeSocket.emit("new-patient", patient);
+    activeSocket.emit("patient-stopped-typing", { patientId });
+
+    usePatientStore.getState().addPatient(patient);
+
+    return patient;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "An error occurred";
+    setError(message);
+    throw err;
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const notifyTyping = () => {
     if (socket) {

@@ -48,11 +48,10 @@ export function useSocket(): Socket | null {
  * Handles automatic cleanup of listeners
  */
 export function useSocketListener<T = any>(
+  socket: Socket | null,
   eventName: string,
   callback: (data: T) => void
 ): void {
-  const socket = useSocket();
-
   useEffect(() => {
     if (!socket) return;
 
